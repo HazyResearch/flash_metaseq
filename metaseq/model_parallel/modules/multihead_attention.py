@@ -191,7 +191,7 @@ class ModelParallelMultiheadAttention(nn.Module):
                 init_method=init_method_weights,
                 init_method_bias=init_method_bias,
                 use_cpu_initialization=use_cpu_initialization,
-                dtype=dtype,
+                #dtype=dtype,
             )
         else:
 
@@ -257,7 +257,7 @@ class ModelParallelMultiheadAttention(nn.Module):
             init_method=init_method_weights,
             skip_bias_add=True,
             use_cpu_initialization=use_cpu_initialization,
-            dtype=dtype,
+            #dtype=dtype,
         )
 
     def forward(

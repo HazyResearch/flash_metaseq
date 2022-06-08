@@ -119,6 +119,7 @@ def _infer_single_node_init(cfg: DistributedTrainingConfig):
 
 
 def distributed_init(cfg: MetaseqConfig):
+    print("initalizing disributed")
     if isinstance(cfg, Namespace):
         from metaseq.dataclass.utils import convert_namespace_to_omegaconf
 
@@ -157,6 +158,7 @@ def distributed_init(cfg: MetaseqConfig):
     else:
         logging.getLogger().setLevel(logging.WARNING)
 
+    print("model parallel ----------------------------------------------", cfg.common.model_parallel_size)
     if cfg.common.model_parallel_size > 1:
         try:
             from megatron.mpu import (
@@ -180,12 +182,15 @@ def distributed_init(cfg: MetaseqConfig):
 
 
 def distributed_main(i, main, cfg: MetaseqConfig, kwargs):
+    print("distributed main ------------------------------------------------------------ ")
     if not cfg.distributed_training.distributed_no_spawn:
         # if in local spawning, i is offset by -1 since torch.multiprocessing.spawn
         # always starts at rank 0
         i = i + 1
     cfg.distributed_training.device_id = i
     if torch.cuda.is_available() and not cfg.common.cpu:
+        print("HERERERERE")
+        print(cfg.distributed_training.device_id)
         torch.cuda.set_device(cfg.distributed_training.device_id)
         # This is temporary way of making microsoft Tutel happy, as it reads the local rank from
         # the env. To make it work in cleaner way, we might need to change their interfaces to be
@@ -244,12 +249,20 @@ def _spawn_helper(main, cfg, kwargs):
 
 
 def call_main(cfg: MetaseqConfig, main, **kwargs):
+    print("Maing dist")
     if cfg.distributed_training.distributed_init_method is None:
         infer_init_method(cfg.distributed_training)
 
-    if cfg.distributed_training.distributed_init_method is not None:
+    print(cfg.distributed_training)
+    print(cfg.distributed_training.device_id)
+    #return distributed_main(
+    #            cfg.distributed_training.device_id, main, cfg, kwargs
+    #        )
+
+    if True or cfg.distributed_training.distributed_init_method is not None:
+        print("Maing dist distributed_init_method")
         # distributed training
-        if not cfg.distributed_training.distributed_no_spawn:
+        if True or not cfg.distributed_training.distributed_no_spawn:
             start_rank = cfg.distributed_training.distributed_rank
             cfg.distributed_training.distributed_rank = None  # assign automatically
             kwargs["start_rank"] = start_rank
@@ -259,6 +272,7 @@ def call_main(cfg: MetaseqConfig, main, **kwargs):
                 cfg.distributed_training.device_id, main, cfg, kwargs
             )
     else:
+        print("Maing dist distributed_init_method ELSE")
         # single GPU main
         return main(cfg, **kwargs)
 
@@ -294,6 +308,10 @@ def get_world_size(group):
 
 
 def get_global_group():
+    #if not torch.distributed.is_initialized():
+    #    os.environ['MASTER_ADDR'] = 'localhost'
+    #    os.environ['MASTER_PORT'] = '12355'
+    #    dist.init_process_group("nccl", rank=0, world_size=1)
     if torch.distributed.is_initialized():
         if not hasattr(get_global_group, "_global_group"):
             # ideally we could use torch.distributed.group.WORLD, but it seems

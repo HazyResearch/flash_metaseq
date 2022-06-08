@@ -9,8 +9,10 @@ MAX_SEQ_LEN = 2048
 BATCH_SIZE = 2048  # silly high bc we dynamically batch by MAX_BATCH_TOKENS
 MAX_BATCH_TOKENS = 3072
 DEFAULT_PORT = 6010
-MODEL_PARALLEL = 8
-TOTAL_WORLD_SIZE = 8
+#MODEL_PARALLEL = 8
+#TOTAL_WORLD_SIZE = 8
+MODEL_PARALLEL = 1
+TOTAL_WORLD_SIZE = 1
 
 
 try:
@@ -28,7 +30,7 @@ except ModuleNotFoundError:
     # reshard-model_part-5.pt
     # reshard-model_part-6.pt
     # reshard-model_part-7.pt
-    MODEL_SHARED_FOLDER = ""
+    MODEL_SHARED_FOLDER = "/home/user/opt_models/"
     # LOCAL_SSD is optional, but it's assuming you have some sort of local
     # hard disk where we can cache a copy of the weights for faster loading.
     LOCAL_SSD = ""
@@ -45,9 +47,16 @@ BPE_MERGES = os.path.join(MODEL_SHARED_FOLDER, "gpt2-merges.txt")
 BPE_VOCAB = os.path.join(MODEL_SHARED_FOLDER, "gpt2-vocab.json")
 
 # where to find the raw files on nfs
-CHECKPOINT_FOLDER = os.path.join(MODEL_SHARED_FOLDER, "175B", "reshard_no_os")
+#CHECKPOINT_FOLDER = os.path.join(MODEL_SHARED_FOLDER, "125m", "reshard_no_os")
 # where to store them on SSD for faster loading
-CHECKPOINT_LOCAL = os.path.join(LOCAL_SSD, "175B", "reshard_no_os", "reshard.pt")
+#CHECKPOINT_LOCAL = os.path.join(LOCAL_SSD, "125", "reshard_no_os", "reshard.pt")
+#CHECKPOINT_FOLDER = os.path.join(MODEL_SHARED_FOLDER, "350m", "reshard_no_os")
+CHECKPOINT_FOLDER = os.path.join(MODEL_SHARED_FOLDER, "350m", "reshard_no_os")
+#CHECKPOINT_FOLDER = os.path.join(MODEL_SHARED_FOLDER, "1.3b", "reshard_no_os")
+# where to store them on SSD for faster loading
+#CHECKPOINT_LOCAL = os.path.join(LOCAL_SSD, "350m", "reshard_no_os", "reshard.pt")
+CHECKPOINT_LOCAL = os.path.join(LOCAL_SSD, "350m", "reshard_no_os", "reshard.pt")
+#CHECKPOINT_LOCAL = os.path.join(LOCAL_SSD, "1.3b", "reshard_no_os", "reshard.pt")
 
 LAUNCH_ARGS = [
     f"--model-parallel-size {MODEL_PARALLEL}",

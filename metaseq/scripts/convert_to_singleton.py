@@ -113,8 +113,9 @@ def main():
     files = glob.glob(f"{args.location}/reshard*.pt")
 
     MP = len(files)
-    BPE_MERGES = args.location + "/gpt2-merges.txt"
-    BPE_VOCAB = args.location + "/gpt2-vocab.json"
+    BPE_MERGES = args.location + "gpt2-merges.txt"
+    BPE_VOCAB = args.location + "gpt2-vocab.json"
+    print(BPE_VOCAB)
 
     # Skeleton out all the annoying command line args we can infer
     ARGS = [
@@ -145,7 +146,7 @@ def main():
     parser.set_defaults(lr_scheduler=None, criterion=None)
     args = options.parse_args_and_arch(parser, input_args=ARGS)
     cfg = convert_namespace_to_omegaconf(args)
-    cfg.distributed_training.distributed_world_size = MP
+    cfg.distributed_training.distributed_world_size = 1
     dist_utils.call_main(cfg, worker_main)
 
 

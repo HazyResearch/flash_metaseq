@@ -81,6 +81,10 @@ class ModelParallelTransformerLanguageModel(TransformerLanguageModel):
         else:
             dtype = torch.float32
 
+        print("---------------------------------------------", getattr(
+                args, "tensor_parallel_init_model_on_gpu", False
+            ))
+
         embed_tokens = VocabParallelEmbedding(
             len(dictionary),
             embed_dim,
@@ -89,9 +93,9 @@ class ModelParallelTransformerLanguageModel(TransformerLanguageModel):
             if getattr(args, "full_megatron_init", False)
             else _vocab_init,
             use_cpu_initialization=not getattr(
-                args, "tensor_parallel_init_model_on_gpu", False
+               args, "tensor_parallel_init_model_on_gpu", False
             ),
-            dtype=dtype,
+            #dtype=dtype,
         )
         return embed_tokens
 

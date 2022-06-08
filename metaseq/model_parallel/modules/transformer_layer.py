@@ -88,7 +88,7 @@ class ModelParallelTransformerDecoderLayer(TransformerDecoderLayer):
             skip_bias_add=self.skip_bias_add,
             init_method_bias=init_method_bias,
             use_cpu_initialization=not initialize_params_on_gpu,
-            dtype=dtype,
+        #    dtype=dtype,
         )
 
     def build_fc2(
@@ -116,7 +116,7 @@ class ModelParallelTransformerDecoderLayer(TransformerDecoderLayer):
             init_method=init_method_weights,
             skip_bias_add=skip_bias_add,
             use_cpu_initialization=not initialize_params_on_gpu,
-            dtype=dtype,
+        #    dtype=dtype,
         )
         if not full_megatron_init:
             # Copy nn.linear initialization to get same initialization as of non-model-parallel.

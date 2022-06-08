@@ -344,7 +344,13 @@ def _is_checkpoint_sharded(checkpoint_files) -> bool:
 
 
 def get_paths_to_load(local_path, suffix="rank-"):
+    print(local_path)
+    print(re.sub(f"{suffix}[0-9]+", f"{suffix}*", local_path))
     checkpoint_files = glob(re.sub(f"{suffix}[0-9]+", f"{suffix}*", local_path))
+    #checkpoint_files = ['/home/user/opt_models/125m/reshard_no_os/reshard-model_part-0.pt', '/home/user/opt_models/125m/reshard_no_os/reshard-model_part-1.pt']
+    #checkpoint_files = ['/home/user/opt_models/1.3b/reshard_no_os/reshard-model_part-0.pt', '/home/user/opt_models/1.3b/reshard_no_os/reshard-model_part-1.pt']
+    #checkpoint_files = ['/home/user/opt_models/125m/reshard_no_os/reshard.pt']
+
     if not _is_checkpoint_sharded(checkpoint_files):
         return [local_path]
     checkpoint_files_count = len(checkpoint_files)
@@ -387,11 +393,15 @@ def load_checkpoint_to_cpu(path, arg_overrides=None, load_on_all_ranks=False) ->
     There's currently no support for > 1 but < all processes loading the
     checkpoint on each node.
     """
+    print("loading on cpu -----------------------------------------------------------------------", load_on_all_ranks)
     local_path = PathManager.get_local_path(path)
     # The locally cached file returned by get_local_path() may be stale for
     # remote files that are periodically updated/overwritten (ex:
     # checkpoint_last.pt) - so we remove the local copy, sync across processes
     # (if needed), and then download a fresh copy.
+
+    #print(local_path)
+    #exit()
     if local_path != path and PathManager.path_requires_pathmanager(path):
         try:
             os.remove(local_path)
@@ -437,6 +447,7 @@ def load_checkpoint_to_cpu(path, arg_overrides=None, load_on_all_ranks=False) ->
         if arg_overrides is not None:
             overwrite_args_by_name(state["cfg"], arg_overrides)
 
+    print(state)
     state = _upgrade_state_dict(state)
     return state
 
