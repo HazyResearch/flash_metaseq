@@ -128,7 +128,8 @@ def batching_loop(timeout=100, max_tokens=MAX_BATCH_TOKENS):
                 dist_utils.broadcast_object(
                     request_object, src_rank=0, group=dist_utils.get_global_group()
                 )
-                generations = generator.generate(**request_object)
+                generations, reporter = generator.generate(**request_object)
+                #reporter.report()
                 # broadcast them back
                 for work_item, gen in zip(batch, generations):
                     work_item.return_queue.put((work_item.uid, gen))

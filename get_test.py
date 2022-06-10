@@ -5,7 +5,7 @@ from flask import jsonify
 url = 'http://127.0.0.1:6010/completions'
 headers = {'Content-Type': 'application/json'}
 
-filters = {'prompt':'LinkedIn is a great company2'}
+filters = {'prompt':'LinkedIn is a great company2 LinkedIn is a great company2 '}
 #print(jsonify(filters))
 #params = dict(json=json.dumps(filters))
 print(filters)

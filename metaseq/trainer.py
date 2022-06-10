@@ -575,6 +575,9 @@ class Trainer(object):
             combine=combine,
             data_selector=data_selector,
         )
+        print(self.cfg)
+        print(self.cfg.dataset)
+        print(self.cfg.dataset.train_subset)
         batch_iterator = self.task.get_batch_iterator(
             dataset=self.task.dataset(self.cfg.dataset.train_subset),
             max_tokens=self.cfg.dataset.max_tokens,
@@ -1008,7 +1011,7 @@ class Trainer(object):
             clip_norm,
             clip_norm_type,
             aggregate_norm_fn=None,
-            skip_gradient_update_on_clip_norm=skip_gradient_update_on_clip_norm,
+            #skip_gradient_update_on_clip_norm=skip_gradient_update_on_clip_norm,
         )
 
     def cumulative_training_time(self):

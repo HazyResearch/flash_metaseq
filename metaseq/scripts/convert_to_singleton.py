@@ -111,8 +111,9 @@ def main():
     real_parser.add_argument("location")
     args = real_parser.parse_args()
     files = glob.glob(f"{args.location}/reshard*.pt")
+    print(files)
 
-    MP = len(files)
+    MP = 1#len(files)
     BPE_MERGES = args.location + "gpt2-merges.txt"
     BPE_VOCAB = args.location + "gpt2-vocab.json"
     print(BPE_VOCAB)
@@ -120,7 +121,7 @@ def main():
     # Skeleton out all the annoying command line args we can infer
     ARGS = [
         "--model-parallel-size",
-        str(MP),
+        str(2),
         "--distributed-world-size",
         str(MP),
         "--task",
@@ -147,6 +148,7 @@ def main():
     args = options.parse_args_and_arch(parser, input_args=ARGS)
     cfg = convert_namespace_to_omegaconf(args)
     cfg.distributed_training.distributed_world_size = 1
+    print(cfg)
     dist_utils.call_main(cfg, worker_main)
 
 

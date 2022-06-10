@@ -58,6 +58,8 @@ class CountingIterator(object):
 
     def __iter__(self):
         for x in self.iterable:
+            print(self.n)
+            print(self.total)
             if self.n >= self.total:
                 raise RuntimeError(
                     "Mismatch between actual and expected iterable length. "
@@ -289,6 +291,9 @@ class StreamingEpochBatchIterator(EpochBatchIterating):
         if self.num_workers > 0:
             os.environ["PYTHONWARNINGS"] = "ignore:semaphore_tracker:UserWarning"
 
+        print("_get_iterator_for_epoch")
+        print(self.dataset)
+        print(self.batch_size)
         itr = torch.utils.data.DataLoader(
             dataset=self.dataset,
             batch_size=self.batch_size,

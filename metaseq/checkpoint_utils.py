@@ -400,7 +400,7 @@ def load_checkpoint_to_cpu(path, arg_overrides=None, load_on_all_ranks=False) ->
     # checkpoint_last.pt) - so we remove the local copy, sync across processes
     # (if needed), and then download a fresh copy.
 
-    #print(local_path)
+    print(local_path)
     #exit()
     if local_path != path and PathManager.path_requires_pathmanager(path):
         try:
@@ -415,7 +415,8 @@ def load_checkpoint_to_cpu(path, arg_overrides=None, load_on_all_ranks=False) ->
         local_path = PathManager.get_local_path(path)
 
     # path to checkpoint...-shared.pt
-    paths_to_load = get_paths_to_load(local_path, suffix="shard")
+    #paths_to_load = get_paths_to_load(local_path, suffix="shard")
+    paths_to_load = ['/home/user/opt_models/125/reshard_no_os/reshard-model_part-1.pt', '/home/user/opt_models/125/reshard_no_os/reshard-model_part-0.pt']
     try:
         if len(paths_to_load) > 1:
             state = _merge_flat_fsdp_shards([torch_load_cpu(f) for f in paths_to_load])
@@ -447,7 +448,7 @@ def load_checkpoint_to_cpu(path, arg_overrides=None, load_on_all_ranks=False) ->
         if arg_overrides is not None:
             overwrite_args_by_name(state["cfg"], arg_overrides)
 
-    print(state)
+    #print(state)
     state = _upgrade_state_dict(state)
     return state
 
@@ -587,11 +588,11 @@ def _upgrade_state_dict(state):
     # add optimizer_history
     if "optimizer_history" not in state:
         state["optimizer_history"] = [
-            {"criterion_name": "CrossEntropyCriterion", "best_loss": state["best_loss"]}
+            {"criterion_name": "CrossEntropyCriterion", "best_loss": 0.1}# state["best_loss"]}
         ]
-        state["last_optimizer_state"] = state["optimizer"]
-        del state["optimizer"]
-        del state["best_loss"]
+        #state["last_optimizer_state"] = state["optimizer"]
+        #del state["optimizer"]
+        #del state["best_loss"]
     # move extra_state into sub-dictionary
     if "epoch" in state and "extra_state" not in state:
         state["extra_state"] = {
@@ -617,11 +618,11 @@ def _upgrade_state_dict(state):
     if "num_updates" not in state["optimizer_history"][-1]:
         state["optimizer_history"][-1]["num_updates"] = 0
     # use stateful training data iterator
-    if "train_iterator" not in state["extra_state"]:
-        state["extra_state"]["train_iterator"] = {
-            "epoch": state["extra_state"]["epoch"],
-            "iterations_in_epoch": state["extra_state"].get("batch_offset", 0),
-        }
+    #if "train_iterator" not in state["extra_state"]:
+    #    state["extra_state"]["train_iterator"] = {
+    #        "epoch": state["extra_state"]["epoch"],
+    #        "iterations_in_epoch": state["extra_state"].get("batch_offset", 0),
+    #    }
     return state
 
 

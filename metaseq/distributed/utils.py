@@ -259,10 +259,10 @@ def call_main(cfg: MetaseqConfig, main, **kwargs):
     #            cfg.distributed_training.device_id, main, cfg, kwargs
     #        )
 
-    if True or cfg.distributed_training.distributed_init_method is not None:
+    if cfg.distributed_training.distributed_init_method is not None:
         print("Maing dist distributed_init_method")
         # distributed training
-        if True or not cfg.distributed_training.distributed_no_spawn:
+        if not cfg.distributed_training.distributed_no_spawn:
             start_rank = cfg.distributed_training.distributed_rank
             cfg.distributed_training.distributed_rank = None  # assign automatically
             kwargs["start_rank"] = start_rank

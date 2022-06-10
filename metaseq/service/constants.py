@@ -6,7 +6,8 @@
 import os
 
 MAX_SEQ_LEN = 2048
-BATCH_SIZE = 2048  # silly high bc we dynamically batch by MAX_BATCH_TOKENS
+#BATCH_SIZE = 2048  # silly high bc we dynamically batch by MAX_BATCH_TOKENS
+BATCH_SIZE = 10  # silly high bc we dynamically batch by MAX_BATCH_TOKENS
 MAX_BATCH_TOKENS = 3072
 DEFAULT_PORT = 6010
 #MODEL_PARALLEL = 8
@@ -51,11 +52,13 @@ BPE_VOCAB = os.path.join(MODEL_SHARED_FOLDER, "gpt2-vocab.json")
 # where to store them on SSD for faster loading
 #CHECKPOINT_LOCAL = os.path.join(LOCAL_SSD, "125", "reshard_no_os", "reshard.pt")
 #CHECKPOINT_FOLDER = os.path.join(MODEL_SHARED_FOLDER, "350m", "reshard_no_os")
-CHECKPOINT_FOLDER = os.path.join(MODEL_SHARED_FOLDER, "350m", "reshard_no_os")
+#CHECKPOINT_FOLDER = os.path.join(MODEL_SHARED_FOLDER, "350m", "reshard_no_os")
+CHECKPOINT_FOLDER = os.path.join(MODEL_SHARED_FOLDER, "opt_metaseq_125m", "model")
 #CHECKPOINT_FOLDER = os.path.join(MODEL_SHARED_FOLDER, "1.3b", "reshard_no_os")
 # where to store them on SSD for faster loading
 #CHECKPOINT_LOCAL = os.path.join(LOCAL_SSD, "350m", "reshard_no_os", "reshard.pt")
-CHECKPOINT_LOCAL = os.path.join(LOCAL_SSD, "350m", "reshard_no_os", "reshard.pt")
+#CHECKPOINT_LOCAL = os.path.join(LOCAL_SSD, "350m", "reshard_no_os", "reshard.pt")
+CHECKPOINT_LOCAL = os.path.join(LOCAL_SSD, "opt_metaseq_125m", "model", "restored.pt")
 #CHECKPOINT_LOCAL = os.path.join(LOCAL_SSD, "1.3b", "reshard_no_os", "reshard.pt")
 
 LAUNCH_ARGS = [
@@ -73,7 +76,10 @@ LAUNCH_ARGS = [
     "--checkpoint-shard-count 1",
     "--use-sharded-state",
     f"--batch-size {BATCH_SIZE}",
-    f"--buffer-size {BATCH_SIZE * MAX_SEQ_LEN}",
+    #f"--buffer-size {BATCH_SIZE * MAX_SEQ_LEN}",
     f"--max-tokens {BATCH_SIZE * MAX_SEQ_LEN}",
+    #"--optimizer adam --lr-scheduler=polynomial_decay --total-num-update=100 --log-format=json --model-parallel-size=1 --distributed-world-size=1 --reset-dataloader",
+    #"wikitext-103",  # required "data" argument.
+    #"dataset",  # required "data" argument.
     "/tmp",  # required "data" argument.
 ]

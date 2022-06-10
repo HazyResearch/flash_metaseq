@@ -27,7 +27,8 @@ def get_training_parser(default_task="translation"):
     parser = get_parser("Trainer", default_task)
     add_dataset_args(parser, train=True)
     add_distributed_training_args(parser)
-    add_model_args(parser)
+    #add_model_args(parser)
+    add_generation_args(parser)
     add_optimization_args(parser)
     add_checkpoint_args(parser)
     return parser
@@ -158,9 +159,13 @@ def parse_args_and_arch(
             elif hasattr(cls, "__dataclass"):
                 gen_parser_from_dataclass(parser, cls.__dataclass())
 
+    print('ahhhhhhhh99999999999')
+
     # Modify the parser a second time, since defaults may have been reset
     if modify_parser is not None:
         modify_parser(parser)
+    print('ahhhhhhhh999999999992222222', parse_known)
+
 
     # Parse a second time.
     if parse_known:
@@ -168,6 +173,7 @@ def parse_args_and_arch(
     else:
         args = parser.parse_args(input_args)
         extra = None
+    print('ahhhhhhhh99999999999iiiiiiiiiiii')
     # Post-process args.
     if (
         hasattr(args, "batch_size_valid") and args.batch_size_valid is None

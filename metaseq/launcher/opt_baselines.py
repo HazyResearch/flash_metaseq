@@ -69,6 +69,7 @@ def get_grid(args):
     DATA_ROOT = ""
     if args.data is None and not args.benchmark:
         cluster_env = get_env_from_args(args)
+        print(DATA_LOCATIONS)
         args.data = os.path.join(
             DATA_LOCATIONS[cluster_env], "corpus_dedup_10_10_1_0.05_exp29"
         )

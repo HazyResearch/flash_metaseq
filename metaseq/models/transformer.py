@@ -572,6 +572,7 @@ class TransformerDecoder(IncrementalDecoder):
         token_embedding: Optional[torch.Tensor] = None,
         incremental_state: Optional[Dict[str, Dict[str, Optional[Tensor]]]] = None,
     ):
+        #print("forward embedding ======================================================")
         # embed tokens and positions
         positions = None
         if self.embed_positions is not None:
@@ -646,6 +647,8 @@ class TransformerDecoder(IncrementalDecoder):
                 - a dictionary with any model-specific outputs
         """
 
+        #print("forwards decoder ======================================================")
+
         # see IncrementalDecoder for important information about
         # incremental state
         x, extra = self.extract_features(
@@ -673,6 +676,7 @@ class TransformerDecoder(IncrementalDecoder):
         token_embeddings: Optional[torch.Tensor] = None,
         self_attn_padding_mask: Optional[Tensor] = None,
     ):
+        #print("forward features ======================================================")
         return self.extract_features_scriptable(
             prev_output_tokens,
             encoder_out=encoder_out,

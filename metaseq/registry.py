@@ -53,6 +53,7 @@ def setup_registry(registry_name: str, base_class=None, default=None, required=F
                 raise ValueError("{} is required!".format(registry_name))
             return None
 
+        print(REGISTRY)
         cls = REGISTRY[choice]
         if hasattr(cls, "build_" + registry_name):
             builder = getattr(cls, "build_" + registry_name)

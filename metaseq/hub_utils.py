@@ -28,6 +28,7 @@ from metaseq.distributed.utils import (
     get_data_parallel_world_size,
 )
 
+from pytorch_memlab import MemReporter
 logger = logging.getLogger(__name__)
 
 
@@ -217,7 +218,8 @@ class GeneratorHubInterface(nn.Module):
         inference_step_args=None,
         batch_size=None,
         **kwargs,
-    ) -> List[List[Dict[str, torch.Tensor]]]:
+        ) -> str:#List[List[Dict[str, torch.Tensor]]]:
+        reporter = MemReporter()
         if torch.is_tensor(tokenized_sentences) and tokenized_sentences.dim() == 1:
             return self.generate(
                 tokenized_sentences.unsqueeze(0),
@@ -225,7 +227,7 @@ class GeneratorHubInterface(nn.Module):
                 verbose=verbose,
                 batch_size=batch_size,
                 **kwargs,
-            )[0]
+            )[0], reporter
 
         # build generator using current args as well as any kwargs
         gen_args = copy.deepcopy(self.cfg.generation)
@@ -303,7 +305,9 @@ class GeneratorHubInterface(nn.Module):
                                 )
                             )
                         )
-        return outputs
+
+
+        return outputs, reporter
 
     def get_sentence_and_language(self, sentence: str):
         """
@@ -681,7 +685,8 @@ class GeneratorInterface:
                 time.time() - start_time, total_generation_time
             )
         )
-        return retval
+        reporter = MemReporter()
+        return retval, reporter
 
     @staticmethod
     def _filter_special(

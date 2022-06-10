@@ -6,6 +6,17 @@
 import math
 from typing import Dict, Optional, Tuple
 
+from einops import rearrange
+
+import sys
+sys.path.insert(0, '/home/user/zoo')
+from src.ops.flash_attn_interface import flash_attn_func
+import time
+
+flash_attn_time = 0
+attn_time = 0
+
+
 import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
@@ -39,6 +50,7 @@ class MultiheadAttention(nn.Module):
         initialize_params_on_gpu=False,
     ):
         super().__init__()
+        print("ITS USING THIS CLAS")
         self.embed_dim = embed_dim
         self.kdim = kdim if kdim is not None else embed_dim
         self.vdim = vdim if vdim is not None else embed_dim
@@ -142,6 +154,7 @@ class MultiheadAttention(nn.Module):
         before_softmax: bool = False,
         need_head_weights: bool = False,
     ) -> Tuple[Tensor, Optional[Tensor]]:
+        #print("ATTENTION FORWARD PASS", query.shape)
         """Input shape: Time x Batch x Channel
 
         Args:
@@ -161,6 +174,8 @@ class MultiheadAttention(nn.Module):
         """
         if need_head_weights:
             need_weights = True
+        #if query.shape[0]>1:
+        #    print(query.shape)
 
         tgt_len, bsz, embed_dim = query.size()
         src_len = tgt_len
@@ -181,6 +196,11 @@ class MultiheadAttention(nn.Module):
             # treats bias in linear module as method.
             and not torch.jit.is_scripting()
         ):
+            print(not self.onnx_trace)
+            print(incremental_state is None)
+            print(not static_kv)
+            print(not torch.jit.is_scripting())
+            print("HERER 1? ")
             assert key is not None and value is not None
             return F.multi_head_attention_forward(
                 query,
@@ -217,6 +237,12 @@ class MultiheadAttention(nn.Module):
         else:
             saved_state = None
 
+
+
+
+        #nprint(self.embed_dim, self.kdim, self.vdim)
+        #print(query.shape)
+        #print(self.self_attention)
         if self.self_attention:
             q = self.q_proj(query)
             k = self.k_proj(query)
@@ -238,6 +264,17 @@ class MultiheadAttention(nn.Module):
             v = self.v_proj(value)
         q *= self.scaling
 
+        '''
+        if query.shape[0]>1:
+            print(q.shape)
+            print(k.shape)
+            print(v.shape)
+            print(tgt_len)
+            print(bsz)
+            print(self.num_heads)
+            print(self.head_dim)
+        '''
+
         if self.bias_k is not None:
             assert self.bias_v is not None
             k = torch.cat([k, self.bias_k.repeat(1, bsz, 1)])
@@ -254,6 +291,9 @@ class MultiheadAttention(nn.Module):
                     ],
                     dim=1,
                 )
+        #print(q.shape)
+        #print(k.shape)
+        #print(v.shape)
 
         q = (
             q.contiguous()
@@ -273,6 +313,9 @@ class MultiheadAttention(nn.Module):
                 .transpose(0, 1)
             )
 
+        #print(q.shape)
+        #print(k.shape)
+        #print(v.shape)
         if saved_state is not None:
             # saved states are stored with shape (bsz, num_heads, seq_len, head_dim)
             if "prev_key" in saved_state:
@@ -304,7 +347,7 @@ class MultiheadAttention(nn.Module):
                 batch_size=bsz,
                 src_len=k.size(1),
                 static_kv=static_kv,
-            )
+                )
 
             saved_state["prev_key"] = k.view(bsz, self.num_heads, -1, self.head_dim)
             saved_state["prev_value"] = v.view(bsz, self.num_heads, -1, self.head_dim)
@@ -314,6 +357,10 @@ class MultiheadAttention(nn.Module):
             incremental_state = self._set_input_buffer(incremental_state, saved_state)
         assert k is not None
         assert k.size(1) == src_len
+
+        #print(q.shape)
+        #print(k.shape)
+        #print(v.shape)
 
         # This is part of a workaround to get around fork/join parallelism
         # not supporting Optional types.
@@ -344,10 +391,18 @@ class MultiheadAttention(nn.Module):
                     dim=1,
                 )
 
+
+
+        global flash_attn_time
+        global attn_time 
+
+        start = time.time()
         attn_weights = torch.bmm(q, k.transpose(1, 2))
+
         attn_weights = self.apply_sparse_mask(attn_weights, tgt_len, src_len, bsz)
 
         assert list(attn_weights.size()) == [bsz * self.num_heads, tgt_len, src_len]
+
 
         if attn_mask is not None:
             # Replace any non-finite values with finite equivalents, since otherwise
@@ -369,6 +424,7 @@ class MultiheadAttention(nn.Module):
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         if before_softmax:
+            print("HERER 2? ")
             return attn_weights, v
 
         attn_weights_float = utils.softmax(
@@ -379,6 +435,51 @@ class MultiheadAttention(nn.Module):
 
         assert v is not None
         attn = torch.bmm(attn_probs, v)
+
+        end = time.time()
+        attn_time += end-start
+        #print(q.shape)
+
+        if q.shape[1] > 1:
+            #attn_flash, probs, lse  = flash_attn_fn(q, k, v, attn_mask)
+            start = time.time()
+            
+            q2 = q.transpose(0, 1)
+            k2 = k.transpose(0, 1)
+            v2 = v.transpose(0, 1)
+
+            self.softmax_temp = 1
+            batch_size = 1
+            seqlen = q2.shape[0]
+            max_s = seqlen
+
+
+            qkv = torch.cat([torch.unsqueeze(q2, 1), torch.unsqueeze(k2, 1), torch.unsqueeze(v2, 1)], 1)
+            #print(qkv.shape)
+
+            cu_seqlens = torch.arange(0, (batch_size + 1) * seqlen, step=seqlen, dtype=torch.int32,device=qkv.device)
+            output = flash_attn_func(qkv, cu_seqlens,  dropout_p=0, max_s=max_s, softmax_scale=1, causal=True, return_attn_probs=False)
+
+            attn_flash = output.transpose(0, 1)
+
+            end = time.time()
+            flash_attn_time += end-start
+
+            #print(attn_flash.shape)
+            #print(attn.shape)
+            #print("attn diff", torch.abs(attn_flash-attn))
+            print("time", attn_time, flash_attn_time)
+
+            attn = attn_flash 
+
+            #print("attn_probs.shape")
+            #print(attn_probs.shape)
+            #print(probs.shape)
+            #print(lse.shape)
+            #print("probs diff", torch.abs(attn_probs-probs))
+
+
+
         assert list(attn.size()) == [bsz * self.num_heads, tgt_len, self.head_dim]
         if self.onnx_trace and attn.size(1) == 1:
             # when ONNX tracing a single decoder step (sequence length == 1)
@@ -386,6 +487,8 @@ class MultiheadAttention(nn.Module):
             attn = attn.contiguous().view(tgt_len, bsz, embed_dim)
         else:
             attn = attn.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
+
+
         attn = self.out_proj(attn)
         attn_weights: Optional[Tensor] = None
         if need_weights:
@@ -397,6 +500,12 @@ class MultiheadAttention(nn.Module):
                 attn_weights = attn_weights.mean(dim=0)
 
         return attn, attn_weights
+
+
+
+        #print(attn.shape)
+
+        #return attn, None
 
     @staticmethod
     def _append_prev_key_padding_mask(

@@ -106,6 +106,7 @@ class SequenceGenerator(nn.Module):
             bos_token (int, optional): beginning of sentence token
                 (default: self.eos)
         """
+        print("is this where it happenns?---------------------------------------------------------------------------")
         incremental_states = torch.jit.annotate(
             Dict[str, Dict[str, Optional[Tensor]]], {}
         )
@@ -217,6 +218,8 @@ class SequenceGenerator(nn.Module):
         # set all the forced tokens
         tokens[:, :start_step] = src_tokens
         # compute the model predictions
+        print("IS THIS THe MODel+++++++++++++++++++++++++++++++++++++++")
+        #print(self.model)
         model_out = self.model.decoder(
             tokens[:, :start_step],
             incremental_state=incremental_states,

@@ -22,8 +22,16 @@ import torch
 import torch.profiler as profiler
 from omegaconf import DictConfig, OmegaConf
 
+import ast
+
+from metaseq.service.constants import (
+    TOTAL_WORLD_SIZE,
+    LAUNCH_ARGS,
+)
+
 from metaseq import (
     checkpoint_utils,
+    hub_utils,
     options,
     tasks,
     utils,
@@ -93,19 +101,56 @@ def main(cfg: DictConfig) -> None:
     assert cfg.criterion, "Please specify criterion to train a model"
 
     # Build model and criterion
-    if cfg.distributed_training.ddp_backend == "fully_sharded":
+    print(cfg.distributed_training.ddp_backend)
+    if True or cfg.distributed_training.ddp_backend == "fully_sharded":
         extra = {
             "use_sharded_state": cfg.distributed_training.use_sharded_state,
         }
+        def _build_model(cfg, task):
+            model = task.build_model(cfg.model).half().cuda()
+            #model.make_generation_fast_()
+            return fsdp_wrap(model)
 
+        # Load the model
+
+        '''
+        out = hub_utils.from_pretrained(
+            model_name_or_path='~/opt_models/350m/reshard_no_os/',
+            checkpoint_file="reshard.pt",
+            data_name_or_path=".",
+            )
+        model = out["models"]
+        '''
+        overrides = ast.literal_eval(cfg.common_eval.model_overrides)
+        logger.info("loading model(s) from {}".format(cfg.common_eval.path))
+        with fsdp_enable_wrap(
+            cfg.distributed_training,
+            use_sharded_state=cfg.distributed_training.use_sharded_state,
+        ):
+            print("path", cfg.common_eval.path)
+            models, _model_args, _task = checkpoint_utils.load_model_ensemble_and_task(
+                utils.split_paths(cfg.common_eval.path),
+                arg_overrides=overrides,
+                task=task,
+                suffix=cfg.checkpoint.checkpoint_suffix,
+                strict=(cfg.checkpoint.checkpoint_shard_count == 1),
+                num_shards=cfg.checkpoint.checkpoint_shard_count,
+                build_model_hook=_build_model,
+            )
+
+        '''
         with fsdp_enable_wrap(cfg.distributed_training, **extra):
             model = fsdp_wrap(
                 task.build_model(cfg.model),
                 process_group=distributed_utils.get_data_parallel_group(),
             )
+        '''
     else:
+        print("JUST BUILDIN MODEL")
         model = task.build_model(cfg.model)
     criterion = task.build_criterion(cfg.criterion)
+
+    model = models[0]
 
     logger.info(model)
     logger.info("task: {}".format(task.__class__.__name__))
@@ -131,6 +176,8 @@ def main(cfg: DictConfig) -> None:
     else:
         for valid_sub_split in cfg.dataset.valid_subset.split(","):
             task.load_dataset(valid_sub_split, combine=False, epoch=1)
+
+    #print(task.datasets["train"].sizes)
 
     # Build trainer
     if cfg.common.model_parallel_size == 1:
@@ -158,6 +205,8 @@ def main(cfg: DictConfig) -> None:
         # don't cache epoch iterators for sharded datasets
         disable_iterator_cache=True,
     )
+
+    print(task.datasets['train'].sizes)
 
     max_epoch = cfg.optimization.max_epoch or math.inf
     train_meter = meters.StopwatchMeter()
@@ -304,7 +353,9 @@ def train(
 
         return valid_losses, should_stop
 
-    for i, samples in enumerate(progress):
+    #for i, samples in enumerate(progress):
+    for i, samples in enumerate(itr):
+        print(samples)
         if (
             distributed_utils.get_global_rank() == 0
             and cfg.common.new_profiler
@@ -566,7 +617,13 @@ def cli_main(
     modify_parser: Optional[Callable[[argparse.ArgumentParser], None]] = None
 ) -> None:
     parser = options.get_training_parser()
-    args = options.parse_args_and_arch(parser, modify_parser=modify_parser)
+    print("adsfasdads")
+    flat_launch_args = []
+    for s in LAUNCH_ARGS:
+        flat_launch_args += s.split()
+    args = options.parse_args_and_arch(parser, modify_parser=modify_parser, input_args=flat_launch_args)
+    print("adsfasdads22")
+
 
     # For training - this is where arg parsing happens.
     cfg = convert_namespace_to_omegaconf(args)
@@ -576,6 +633,8 @@ def cli_main(
         logger.info(
             f"Started plasma server pid {server.server.pid} {cfg.common.plasma_path}"
         )
+
+    cfg.distributed_training.distributed_world_size = 1#TOTAL_WORLD_SIZE
 
     if args.profile:
         with torch.cuda.profiler.profile():
